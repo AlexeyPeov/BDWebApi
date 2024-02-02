@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 namespace WebBirthdayApp.Validators;
 public class JpegValidatorAttribute : ValidationAttribute
 {
+    public static readonly int MaxImageSizeInBytes = 1024 * 1024 / 2; // 0.5mb
+
     protected override ValidationResult? IsValid(object? value, ValidationContext context)
     {
         if (value == null)
@@ -21,5 +23,4 @@ public class JpegValidatorAttribute : ValidationAttribute
 
         return ValidationResult.Success;
     }
-    private const int MaxImageSizeInBytes = 1024 * 1024 / 2; // 0.5mb
 }

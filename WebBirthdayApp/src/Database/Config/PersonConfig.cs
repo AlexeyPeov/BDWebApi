@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using WebBirthdayApp.Models;
+using WebBirthdayApp.Validators;
 
 namespace WebBirthdayApp.Database.Config;
 
@@ -17,9 +18,9 @@ public class PersonConfig : IEntityTypeConfiguration<Person>
         builder.Property(p => p.SecondName).IsRequired().HasMaxLength(50);
         builder.Property(p => p.Patronymic).IsRequired(false).HasMaxLength(50);
         builder.Property(p => p.Birthday).IsRequired();
-        builder.Property(p => p.Image).IsRequired();
+        builder.Property(p => p.Image).IsRequired().HasMaxLength(JpegValidatorAttribute.MaxImageSizeInBytes);
         
-        builder.HasData(_GenerateRandomPeople(150));
+        //builder.HasData(_GenerateRandomPeople(150));
 
     }
     
@@ -27,16 +28,6 @@ public class PersonConfig : IEntityTypeConfiguration<Person>
     {
         var list = new List<Person>(amount);
         
-        byte[] imageBytes;
-        string path = Path.Combine("src", "Database", "Config", "chmondel.jpg");
-        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
-        {
-            using (var reader = new BinaryReader(stream))
-            {
-                imageBytes = reader.ReadBytes((int)stream.Length);
-            }
-        }
-
         for (int i = 1; i <= amount; ++i)
         {
             bool isMen = Random.Shared.Next(0, 2) == 1;
