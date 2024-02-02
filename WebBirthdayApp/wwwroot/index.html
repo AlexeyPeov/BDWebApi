@@ -4,14 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Birthday List</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="simple.min.css">
 </head>
 <body>
-    <div id="app">
-        
-    </div>
+<div id="controls">
+    <label for="sort"></label><select id="sort">
+        <option value="false">Без сортировки</option>
+        <option value="true">Сортировать по дням рождения</option>
+    </select>
+    <button id="prev-page"> < </button>
+    <button id="next-page"> > </button>
+</div>
+<div id="app">
 
-    <h1> HELLO </h1>
-    <script src="main.js"></script>
+</div>
+<script src="main.js"></script>
 </body>
 </html>

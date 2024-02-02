@@ -53,6 +53,15 @@ public class PersonController : ControllerBase
         return Ok(q.Skip(PageSize * pageNum.Value).Take(PageSize).ToList());
     }
     
+    [HttpGet("pages_amount")]
+    [ProducesResponseType(StatusCodes.Status406NotAcceptable)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult<int> GetPages()
+    {
+        return Ok(_connection.Person.Count() / PageSize);
+    }
+    
     [HttpPost("create")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status406NotAcceptable)]

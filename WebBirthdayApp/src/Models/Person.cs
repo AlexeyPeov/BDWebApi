@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using WebBirthdayApp.Validators;
 
 namespace WebBirthdayApp.Models;
 
@@ -19,6 +20,7 @@ public class Person
     [StringLength(50)]
     public string? Patronymic { get; set; }
     public DateOnly Birthday { get; set; }
+    [JpegValidator] public byte[] Image { get; set; } = {};
     
     public static Person CreateCopyNoId(Person p)
     {

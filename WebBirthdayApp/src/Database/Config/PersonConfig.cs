@@ -17,6 +17,7 @@ public class PersonConfig : IEntityTypeConfiguration<Person>
         builder.Property(p => p.SecondName).IsRequired().HasMaxLength(50);
         builder.Property(p => p.Patronymic).IsRequired(false).HasMaxLength(50);
         builder.Property(p => p.Birthday).IsRequired();
+        builder.Property(p => p.Image).IsRequired();
         
         builder.HasData(_GenerateRandomPeople(150));
 
@@ -25,6 +26,16 @@ public class PersonConfig : IEntityTypeConfiguration<Person>
      private static List<Person> _GenerateRandomPeople(int amount)
     {
         var list = new List<Person>(amount);
+        
+        byte[] imageBytes;
+        string path = Path.Combine("src", "Database", "Config", "chmondel.jpg");
+        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
+        {
+            using (var reader = new BinaryReader(stream))
+            {
+                imageBytes = reader.ReadBytes((int)stream.Length);
+            }
+        }
 
         for (int i = 1; i <= amount; ++i)
         {
@@ -46,7 +57,8 @@ public class PersonConfig : IEntityTypeConfiguration<Person>
                 Name = people[nameIndex].Item1,
                 Patronymic = people[patronymicIndex].Item2,
                 SecondName = people[secondNameIndex].Item3,
-                Birthday = new DateOnly(randYear, randMonth, randDay)
+                Birthday = new DateOnly(randYear, randMonth, randDay),
+                
             });
         }
 
