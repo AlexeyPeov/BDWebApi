@@ -11,32 +11,19 @@ public class Person
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int? Id { get; init; }
-    [Required]
-    [StringLength(50)]
-    public string Name { get; set; } = "";
-    [Required]
-    [StringLength(50)]
-    public string SecondName { get; set; } = "";
-    [StringLength(50)]
-    public string? Patronymic { get; set; }
+
+    [Required] [StringLength(50)] public string Name { get; set; } = "";
+    [Required] [StringLength(50)] public string SecondName { get; set; } = "";
+    [StringLength(50)] public string? Patronymic { get; set; }
     public DateOnly Birthday { get; set; }
-    [JpegValidator] public byte[] Image { get; set; } = {};
-    
-    public static Person CreateCopyNoId(Person p)
+    public int? ImgId { get; set; }
+    public virtual Image? Img { get; set; }
+
+    public void CopyFromFrontend(FrontendPersonCreationRequest from)
     {
-        return new Person
-        {
-            Name = p.Name,
-            SecondName = p.SecondName,
-            Patronymic = p.Patronymic,
-            Birthday = p.Birthday,
-        };
-    }
-    public static void CopyPerson(in Person from, ref Person to)
-    {
-        to.Name = from.Name;
-        to.SecondName = from.SecondName;
-        to.Patronymic = from.Patronymic;
-        to.Birthday = from.Birthday;
+        Name = from.Name;
+        SecondName = from.SecondName;
+        Patronymic = from.Patronymic;
+        Birthday = from.Birthday;
     }
 }

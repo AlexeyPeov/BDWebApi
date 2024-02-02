@@ -4,16 +4,18 @@ using WebBirthdayApp.Models;
 
 namespace WebBirthdayApp.Database;
 
-public class PersonDbContext : DbContext
+public class AppDbContext : DbContext
 {
-    public PersonDbContext(DbContextOptions<PersonDbContext> options) 
+    public AppDbContext(DbContextOptions<AppDbContext> options) 
         : base(options) {}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new PersonConfig());
+        modelBuilder.ApplyConfiguration(new ImageConfig());
+        
     }
     
-    
     public DbSet<Person> Person { get; set; }
+    public DbSet<Image> Image { get; set; }
 }

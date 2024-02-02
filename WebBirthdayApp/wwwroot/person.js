@@ -10,22 +10,28 @@ function displayPerson(person) {
     const detailsDiv = document.getElementById('person-details');
     detailsDiv.innerHTML = `
             <form id="person-form">
-                <label>
-                    Фамилия:
-                    <input name="secondName" value="${person.secondName}">
-                </label>
-                <label>
-                    Имя:
-                    <input name="name" value="${person.name}">
-                </label>
-                <label>
-                    Отчество:
-                    <input name="patronymic" value="${person.patronymic}">
-                </label>
-                <label>
-                    Дата рождения:
-                    <input name="birthday" value="${person.birthday}">
-                </label>
+            <label>
+                Фамилия:
+                <input name="secondName" value="${person.secondName}"required>
+            </label>
+            <label>
+                Имя:
+                <input name="name" value="${person.name}" required>
+            </label>
+            <label>
+                Отчество:
+                <input name="patronymic" value="${person.patronymic}" required>
+            </label>
+            <label>
+                Дата рождения:
+               <input name="birthday" value="${person.birthday}" type="date" required>
+            </label>
+            <label>
+                Фотография:
+                <input name="image" type="file">
+            </label>
+            <button type="submit">Обновить</button>
+
             </form>
         `;
 }
@@ -52,7 +58,6 @@ window.onload = async function() {
         const updatedPerson = Object.fromEntries(new FormData(document.getElementById('person-form')));
         const patchDocument = [];
 
-        // Compare updatedPerson with originalPerson and create patch document
         for (let key in updatedPerson) {
             if (updatedPerson[key] !== originalPerson[key]) {
                 patchDocument.push({
@@ -113,4 +118,20 @@ async function deletePerson() {
     const resp = await response;
     return resp.status;
 }
+
+document.getElementById('person-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const response = await fetch(`${API_ENDPOINT}/${id}/update`, {
+        method: 'PUT',
+        body: formData
+    });
+    if (response.ok) {
+        // Refresh the person data
+        let person = await fetchPerson();
+        displayPerson(person);
+    } else {
+        console.error('Failed to update person');
+    }
+});
 

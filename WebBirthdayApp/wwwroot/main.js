@@ -7,6 +7,25 @@ var numPages = 0;
 })();
 var cacheUnsorted = {};
 var cacheSorted = {};
+var images = {};
+
+async function fetchImage(id) {
+    if (images[id])
+        return images[id];
+    
+    const response = await fetch(`${API_ENDPOINT}/${id}/get_image`);
+    if (response.ok) {
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = function() {
+            images[id] = reader.result;
+        }
+        reader.readAsDataURL(blob);
+    } else {
+        images[id] = 'default.jpg';
+    }
+}
+
 
 async function fetchData(sort = false, pageNum = 0) {
     var sorted = document.getElementById('sort').value === 'true';
@@ -21,39 +40,39 @@ async function fetchData(sort = false, pageNum = 0) {
     return data;
 }
 
-function displayData(data) {
+async function displayData(data) {
     const appDiv = document.getElementById('app');
     appDiv.innerHTML = '';
 
-    // Create table
     const table = document.createElement('table');
 
-    // Create table header
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    ['Фамилия', 'Имя', 'Отчество', 'Дата рождения'].forEach(text => {
+    ['Фотография', 'Фамилия', 'Имя', 'Отчество', 'Дата рождения'].forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
         headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
     table.appendChild(thead);
-
-    // Create table body
+    
     const tbody = document.createElement('tbody');
-    data.forEach(person => {
+    for (const person of data) {
+        await fetchImage(person.id);
         const row = document.createElement('tr');
         row.innerHTML = `
+            <td><img src="${images[person.id]}" alt="img"></td>
             <td>${person.secondName}</td>
             <td>${person.name}</td>
             <td>${person.patronymic}</td>
             <td>${person.birthday}</td>
+            
         `;
         row.addEventListener('click', () => {
             window.location.href = `/person.html?id=${person.id}`;
         });
         tbody.appendChild(row);
-    });
+    }
     table.appendChild(tbody);
 
     appDiv.appendChild(table);
@@ -77,5 +96,7 @@ document.getElementById('next-page').addEventListener('click', () => {
     pageNum += 1;
     fetchData(document.getElementById('sort').value === 'true', pageNum).then(displayData);
 });
+
+
 
 fetchData().then(displayData);

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create person</title>
+    <link rel="stylesheet" href="simple.min.css">
+</head>
+<body>
+<div id="create-person">
+    <form id="create-person-form">
+        <label>
+            Фамилия:
+            <input name="secondName" required>
+        </label>
+        <label>
+            Имя:
+            <input name="name" required>
+        </label>
+        <label>
+            Отчество:
+            <input name="patronymic" required>
+        </label>
+        <label>
+            Дата рождения:
+            <input name="birthday" type="date" required>
+        </label>
+        <label>
+            Image:
+            <input name="image" type="file">
+        </label>
+        <button type="submit">Create</button>
+    </form>
+</div>
+<script>
+
+    document.getElementById('create-person-form').addEventListener('submit', async event => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const response = await fetch(`${API_ENDPOINT}/create`, {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            // Refresh the data
+            fetchData().then(displayData);
+        } else {
+            console.error('Failed to create person');
+        }
+    });
+    
+</script>
+
+</body>
+</html>

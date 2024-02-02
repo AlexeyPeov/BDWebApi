@@ -18,10 +18,15 @@ public class PersonConfig : IEntityTypeConfiguration<Person>
         builder.Property(p => p.SecondName).IsRequired().HasMaxLength(50);
         builder.Property(p => p.Patronymic).IsRequired(false).HasMaxLength(50);
         builder.Property(p => p.Birthday).IsRequired();
-        builder.Property(p => p.Image).IsRequired().HasMaxLength(JpegValidatorAttribute.MaxImageSizeInBytes);
-        
-        //builder.HasData(_GenerateRandomPeople(150));
+        builder.Property(p => p.ImgId);
 
+        builder.HasData(_GenerateRandomPeople(150));
+
+        builder.HasOne(p=>p.Img)
+            .WithOne()
+            .HasForeignKey<Person>(p => p.ImgId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
     }
     
      private static List<Person> _GenerateRandomPeople(int amount)

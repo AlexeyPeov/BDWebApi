@@ -11,7 +11,7 @@ using WebBirthdayApp.Database;
 
 namespace WebBirthdayApp.Migrations
 {
-    [DbContext(typeof(PersonDbContext))]
+    [DbContext(typeof(AppDbContext))]
     [Migration("20240202151341_AddingImages")]
     partial class AddingImages
     {

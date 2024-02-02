@@ -1,8 +1,11 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using WebBirthdayApp.Database;
 using WebBirthdayApp.Models;
+using WebBirthdayApp.Validators;
 
 namespace WebBirthdayApp.Controllers;
 
@@ -11,7 +14,7 @@ namespace WebBirthdayApp.Controllers;
 public class PersonController : ControllerBase
 {
 
-    public PersonController(ILogger<PersonController> logger, PersonDbContext conn)
+    public PersonController(ILogger<PersonController> logger, AppDbContext conn)
     {
         _logger = logger;
         _connection = conn;
@@ -28,7 +31,6 @@ public class PersonController : ControllerBase
         
         if (pageNum < 0)
             return BadRequest("Bad page number");
-        
         
         if (s == null)
         {
@@ -63,25 +65,55 @@ public class PersonController : ControllerBase
     }
     
     [HttpPost("create")]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public ActionResult<Person> create([FromBody]Person? p)
+    public ActionResult create([FromForm]FrontendPersonCreationRequest? r)
     {
-        if (p == null)
+        if (r == null)
+        {
             return BadRequest();
+        }
         
-        var person = Person.CreateCopyNoId(p);
+        var person = new Person();
+        person.CopyFromFrontend(r);
+        
+        var image = new Image();
+
+        using var transaction = _connection.Database.BeginTransaction();
+
+        if (r.Img != null)
+        {
+            image.SetFromFile(r.Img);
+            _connection.Image.Add(image);
+            bool imgErr = CheckForErrorsAndSave();
+
+            if (imgErr)
+            {
+                transaction.Rollback();
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        if (image.Id != null)
+        {
+            person.ImgId = image.Id;
+        }
         
         _connection.Person.Add(person);
         
-        bool err = CheckForErrorsAndSave();
-
-        if (err)
-            return StatusCode(StatusCodes.Status500InternalServerError);
+        bool persErr = CheckForErrorsAndSave();
         
-        return CreatedAtRoute("get", new {id = person.Id}, person);
+        if (persErr)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError);
+        }
+        
+        transaction.Commit();
+        
+        //return CreatedAtRoute("get", new {id = person.Id}, person);
+        return Ok();
     }
 
     [HttpPut]
@@ -91,9 +123,9 @@ public class PersonController : ControllerBase
     [ProducesResponseType(StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public ActionResult<Person> update(int id, [FromBody] Person? model)
+    public ActionResult<Person> update(int id, [FromForm] FrontendPersonCreationRequest? r)
     {
-        if (model == null)
+        if (r == null)
             return BadRequest();
 
         var person = _connection.Person.FirstOrDefault(p => p.Id == id);
@@ -101,12 +133,8 @@ public class PersonController : ControllerBase
         if (person == null)
             return NotFound();
         
-        Person.CopyPerson(model, ref person);
-            
-        bool good = TryValidateModel(person);
-        
-        if(!good)
-            return BadRequest(ModelState);
+        person.CopyFromFrontend(r);
+       // person.SetImageFromIFormFile(model.Img);
         
         bool err = CheckForErrorsAndSave();
 
@@ -123,8 +151,7 @@ public class PersonController : ControllerBase
     [ProducesResponseType(StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public ActionResult<Person> Patch(int id, [FromBody]JsonPatchDocument<Person>? model)
-    {
+    public ActionResult<Person> Patch(int id, [FromBody]JsonPatchDocument<Person>? model) {
         if (id < 0 || model == null)
             return BadRequest();
 
@@ -147,6 +174,60 @@ public class PersonController : ControllerBase
         return NoContent();
     }
     
+    [HttpPatch]
+    [Route("{id:int}/patch_img")]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status406NotAcceptable)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public ActionResult Patch(int id, [FromBody][ImageValidator]IFormFile? f) {
+        if (id < 0 || f == null)
+            return BadRequest();
+
+        var p = _connection.Person.FirstOrDefault(p => p.Id == id);
+        
+        if (p == null)
+            return NotFound();
+        
+        var image = new Image(f);
+        using var transaction = _connection.Database.BeginTransaction();
+        
+        var dbImg = _connection.Image
+            .FirstOrDefault(i => i.Id == p.ImgId);
+        
+        if (dbImg == null)
+        {
+            _connection.Image.Add(image);
+            
+            bool imgErr = CheckForErrorsAndSave();
+            if (imgErr)
+            {
+                transaction.Rollback();
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+
+            p.ImgId = image.Id;
+        }
+        else
+        {
+            dbImg.Bytes = image.Bytes;
+        }
+        
+        bool err = CheckForErrorsAndSave();
+
+        if (err)
+        {
+            transaction.Rollback();
+            return StatusCode(StatusCodes.Status500InternalServerError);
+        }
+        
+        transaction.Commit();
+        
+        return NoContent();
+    }
+
+    
     [HttpGet]
     [Route("{id:int}/get")]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -159,8 +240,33 @@ public class PersonController : ControllerBase
         {
             return NotFound();
         }
-
+        
         return Ok(p);
+    }
+    
+    [HttpGet]
+    [Route("{id:int}/get_image")]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status406NotAcceptable)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult GetImage(int id)
+    {
+        var p = _connection.Person.FirstOrDefault(p => p.Id == id);
+        
+        if (p == null || p.ImgId == null)
+        {
+            return NotFound();
+        }
+
+        var img = _connection.Image.FirstOrDefault(i => i.Id == p.ImgId);
+        
+        if(img == null)
+        {
+            return NotFound();
+        }
+        
+        string base64Image = Convert.ToBase64String(img.Bytes);
+        return Ok(base64Image);
     }
     
     [HttpDelete]
@@ -176,16 +282,26 @@ public class PersonController : ControllerBase
             return BadRequest();
 
         var person = _connection.Person.FirstOrDefault(p => p.Id == id);
-
+        
         if (person == null)
             return NotFound();
-
+        
+        var image = _connection.Image.FirstOrDefault(i => i.Id == person.ImgId);
+        
+        using var transaction = _connection.Database.BeginTransaction();
         _connection.Person.Remove(person);
+        
+        if(image != null)
+            _connection.Image.Remove(image);
         
         bool err = CheckForErrorsAndSave();
 
         if (err)
+        {
+            transaction.Rollback();
             return StatusCode(StatusCodes.Status500InternalServerError); 
+        }
+        transaction.Commit();
         
         return NoContent();
     }
@@ -205,7 +321,8 @@ public class PersonController : ControllerBase
         return err;
     }
 
+
     private readonly ILogger<PersonController> _logger;
-    private readonly PersonDbContext _connection;
-    private const int PageSize = 100;
+    private readonly AppDbContext _connection;
+    private const int PageSize = 10;
 }
