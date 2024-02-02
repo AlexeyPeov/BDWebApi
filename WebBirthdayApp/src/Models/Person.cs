@@ -19,11 +19,10 @@ public class Person
     [StringLength(50)]
     public string? Patronymic { get; set; }
     public DateOnly Birthday { get; set; }
-
-    public Person(){}
+    
     public static Person CreateCopyNoId(Person p)
     {
-        return new Person()
+        return new Person
         {
             Name = p.Name,
             SecondName = p.SecondName,
@@ -31,7 +30,6 @@ public class Person
             Birthday = p.Birthday,
         };
     }
-
     public static void CopyPerson(in Person from, ref Person to)
     {
         to.Name = from.Name;

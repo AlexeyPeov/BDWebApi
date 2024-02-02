@@ -22,17 +22,35 @@ public class PersonController : ControllerBase
     [ProducesResponseType(StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public ActionResult<List<Person>> Index(int? pageNum = null)
+    public ActionResult<List<Person>> Index(string? s, int? pageNum = null)
     {
         pageNum ??= 0;
         
         if (pageNum < 0)
             return BadRequest("Bad page number");
         
-        return Ok(_connection.Person
-            .Skip(PageSize * pageNum.Value)
-            .Take(PageSize).ToList()
-        );
+        
+        if (s == null)
+        {
+            return Ok(_connection.Person
+                .Skip(PageSize * pageNum.Value)
+                .Take(PageSize).ToList()
+            );
+        }
+        
+        if(s != "bd")
+            return BadRequest("Bad sort type, only \"bd\" allowed");
+        
+        var comp = DateTime.Today;
+        IQueryable<Person> q = from p in _connection.Person
+            orderby 
+                p.Birthday.Month < comp.Month || 
+                    (p.Birthday.Month == comp.Month && p.Birthday.Day < comp.Day), 
+                p.Birthday.Month, 
+                p.Birthday.Day
+            select p;
+        
+        return Ok(q.Skip(PageSize * pageNum.Value).Take(PageSize).ToList());
     }
     
     [HttpPost("create")]
