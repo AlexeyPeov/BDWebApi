@@ -1,4 +1,4 @@
-import * as api from 'api.js';
+import * as api from './api.js';
 
 let person = {
     "name": "Имя",

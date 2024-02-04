@@ -1,4 +1,4 @@
-import * as api from 'api.js';
+import * as api from './api.js';
 
 let numPages = 0;
 (async () => { numPages = await api.getPagesAmount(); })();
@@ -22,33 +22,27 @@ function getSortVal(){
     return s;
 }
 
-window.onload = async function (){
-    
-    displayPeople(await api.getAllPeople(isSorted(),pageNum));
+displayPeople(await api.getAllPeople(isSorted(),pageNum));
 
 
-    sort.addEventListener('change', async () => {
-        displayPeople(await api.getAllPeople(isSorted(), 0));
-    });
+sort.addEventListener('change', async () => {
+    displayPeople(await api.getAllPeople(isSorted(), 0));
+});
 
-    document.getElementById('prev-page').addEventListener('click', async () => {
-        if (pageNum > 0) {
-            pageNum -= 1;
-            displayPeople(await api.getAllPeople(isSorted(), pageNum));
-        }
-    });
-
-    document.getElementById('next-page').addEventListener('click', async () => {
-        if(pageNum >= numPages)
-            return;
-
-        pageNum += 1;
+document.getElementById('prev-page').addEventListener('click', async () => {
+    if (pageNum > 0) {
+        pageNum -= 1;
         displayPeople(await api.getAllPeople(isSorted(), pageNum));
-    });
-    
-    
-    
-}
+    }
+});
+
+document.getElementById('next-page').addEventListener('click', async () => {
+    if(pageNum >= numPages)
+        return;
+
+    pageNum += 1;
+    displayPeople(await api.getAllPeople(isSorted(), pageNum));
+});
 
 function displayPeople(people) {
     const appDiv = document.getElementById('app');
@@ -114,10 +108,12 @@ function truncateText(text) {
     return text.length > maxLength ? text.slice(0, maxLength - 3) + '...' : text;
 }
 
-document.getElementById('add-person').addEventListener('click', () => {
-    window.location.href = `/create.html`;
-});
-
 function isSorted(){
     return sort.value === 'true';
 }
+
+document.getElementById('add-person').addEventListener('click', () => {
+    sessionStorage.setItem('pageNum', pageNum);
+    sessionStorage.setItem('sorted', isSorted() ? "true" : "false" );
+    window.location.href = `/create.html`;
+});

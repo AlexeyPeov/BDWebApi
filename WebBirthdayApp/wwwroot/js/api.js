@@ -1,24 +1,17 @@
 export const base_endpoint = '/api/people';
-export let ppl_data_cache_sorted = {};
-export let ppl_data_cache_unsorted = {};
 export let image_cache = {}
 
 export async function getAllPeople(sort = false, page = 0) {
-    let cache = sort ? ppl_data_cache_sorted : ppl_data_cache_unsorted;
-
-    // if (cache[page])
-    //     return cache[page];
-    
     const endpoint =`${base_endpoint}/${page}` + (sort ? "?s=bd" : "");
     
     const response = await fetch(endpoint);
     const data = await response.json();
     
     for(const person of data){
-        await getImage(person.id);
+        if(person.imgId !== null && image_cache[person.id] === undefined)
+            await getImage(person.id);
     }
     
-    cache[page] = data;
     return data;
 }
 

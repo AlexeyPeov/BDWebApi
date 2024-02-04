@@ -1,4 +1,4 @@
-import * as api from 'api.js';
+import * as api from './api.js';
 
 const personId = new URLSearchParams(window.location.search).get('id');
 
@@ -64,16 +64,9 @@ function reconfigureForm(form){
 }
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
-    let response = await api.deletePerson(personId);
-    let data = await response.json();
-
-    if(!response.ok){
-        alert(api.formatErrors(data.errors));
-    }
-    else{
-        alert("Данные были успешно удалены, нажмите \"Ок\" чтобы перейти на главную страницу");
-        window.location.href = '/';
-    }
+    await api.deletePerson(personId);
+    alert("Данные были успешно удалены!");
+    window.location.href = '/';
 });
 
 document.getElementById('go-back').addEventListener('click', async () => {
@@ -109,7 +102,7 @@ function displayPerson(person, image) {
             <input id="file-input" name="Img" type="file">
         </label>
         <button class="btn" type="submit">Обновить</button>
-        <button class="btn" id="delete-btn">Удалить</button>
+        <button class="btn" type="reset" id="delete-btn">Удалить</button>
         </form>           
             `;
     
