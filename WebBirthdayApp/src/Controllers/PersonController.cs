@@ -65,15 +65,15 @@ public class PersonController : ControllerBase
     }
     
     [HttpPost("create")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public ActionResult create([FromForm]FrontendPersonCreationRequest? r)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult<Person?> Create([FromForm]FrontendPersonCreationRequest? r)
     {
         if (r == null)
         {
-            return BadRequest();
+            return BadRequest(ModelState);
         }
         
         var person = new Person();
@@ -82,7 +82,7 @@ public class PersonController : ControllerBase
         var image = new Image();
 
         using var transaction = _connection.Database.BeginTransaction();
-
+        
         if (r.Img != null)
         {
             image.SetFromFile(r.Img);
@@ -97,23 +97,18 @@ public class PersonController : ControllerBase
         }
 
         if (image.Id != null)
-        {
             person.ImgId = image.Id;
-        }
         
         _connection.Person.Add(person);
         
         bool persErr = CheckForErrorsAndSave();
         
-        if (persErr)
-        {
+        if (persErr || person.Id == null)
             return StatusCode(StatusCodes.Status500InternalServerError);
-        }
         
         transaction.Commit();
         
-        //return CreatedAtRoute("get", new {id = person.Id}, person);
-        return Ok();
+        return Ok(person);
     }
 
     [HttpPut]
@@ -123,10 +118,10 @@ public class PersonController : ControllerBase
     [ProducesResponseType(StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public ActionResult<Person> update(int id, [FromForm] FrontendPersonCreationRequest? r)
+    public ActionResult<Person> Update(int id, [FromForm] FrontendPersonCreationRequest? r)
     {
         if (r == null)
-            return BadRequest();
+            return BadRequest(ModelState);
 
         var person = _connection.Person.FirstOrDefault(p => p.Id == id);
 
@@ -134,12 +129,54 @@ public class PersonController : ControllerBase
             return NotFound();
         
         person.CopyFromFrontend(r);
-       // person.SetImageFromIFormFile(model.Img);
+        
+        using var transaction = _connection.Database.BeginTransaction();
+        
+        if (r.Img == null)
+        {
+            if (!CheckForErrorsAndSave())
+            {
+                transaction.Commit();
+                return NoContent();
+            }
+            
+            transaction.Rollback();
+
+            return StatusCode(StatusCodes.Status500InternalServerError);
+
+        }
+        
+        var image = new Image(r.Img);
+        
+        var dbImg = _connection.Image.FirstOrDefault(i => i.Id == person.ImgId);
+        
+        if (dbImg == null)
+        {
+            _connection.Image.Add(image);
+            
+            bool imgErr = CheckForErrorsAndSave();
+            if (imgErr)
+            {
+                transaction.Rollback();
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+
+            person.ImgId = image.Id;
+        }
+        else
+        {
+            dbImg.Bytes = image.Bytes;
+        }
         
         bool err = CheckForErrorsAndSave();
 
         if (err)
+        {
+            transaction.Rollback();
             return StatusCode(StatusCodes.Status500InternalServerError);
+        }
+        
+        transaction.Commit();
         
         return NoContent();
     }
@@ -153,7 +190,7 @@ public class PersonController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public ActionResult<Person> Patch(int id, [FromBody]JsonPatchDocument<Person>? model) {
         if (id < 0 || model == null)
-            return BadRequest();
+            return BadRequest(ModelState);
 
         var p = _connection.Person.FirstOrDefault(p => p.Id == id);
 
@@ -181,9 +218,12 @@ public class PersonController : ControllerBase
     [ProducesResponseType(StatusCodes.Status406NotAcceptable)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public ActionResult Patch(int id, [FromBody][ImageValidator]IFormFile? f) {
+    public ActionResult Patch(int id, [FromForm]FrontendImageRequest r)
+    {
+        var f = r.Img;
+        
         if (id < 0 || f == null)
-            return BadRequest();
+            return BadRequest("Empty image sent");
 
         var p = _connection.Person.FirstOrDefault(p => p.Id == id);
         
@@ -237,9 +277,7 @@ public class PersonController : ControllerBase
     {
         var p = _connection.Person.FirstOrDefault(p => p.Id == id);
         if (p == null)
-        {
             return NotFound();
-        }
         
         return Ok(p);
     }
@@ -265,8 +303,7 @@ public class PersonController : ControllerBase
             return NotFound();
         }
         
-        string base64Image = Convert.ToBase64String(img.Bytes);
-        return Ok(base64Image);
+        return File(img.Bytes, "image/jpeg");
     }
     
     [HttpDelete]
@@ -279,7 +316,7 @@ public class PersonController : ControllerBase
     public ActionResult<Person> Delete(int id)
     {
         if (id <= 0)
-            return BadRequest();
+            return BadRequest(ModelState);
 
         var person = _connection.Person.FirstOrDefault(p => p.Id == id);
         
